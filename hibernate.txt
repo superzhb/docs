@@ -1,0 +1,85 @@
+Hibernate 持久层框架
+
+
+1、使用Hibernate，持久化了类要有一个无参数的构造方法，因为要使用反射机制创建对象，另外要有一个唯一的标识符ID。
+SessionFactory 针对单个数据库映射关系经过编译后的内存镜像，是线程安全的。他是Session的工厂类，该对象处于进程或者集群的基础上，为事务之间可以重用的数据提供二级缓存
+Session 表示应用程序和存储层之间交互的对象，一旦Session关闭，这些对象就处于游离态。
+
+一个持久化的对象实例可能有三个状态，瞬时态、持久态、游离态
+瞬时态：该实例从未与Session关联过，没有持久化标识（即主键），通过save() 或者saveOrUpdate()方法变成持久态。
+持久态：实例与Session相关联，拥有持久化标识，与数据库中的某一行相关联。
+托管态：曾经与Session相关联，在数据库中有对应的数据，但是和Model没有关联
+
+get()和load()的区别
+get()会先去查询session一级缓存，再去查找sessionFactory二级缓存，然后去查找数据库，如果都没有则会返回null。
+load() 延迟加载，他去查找一级缓存，如果没有就创建，实际使用时才查询二级缓存和数据库，它默认能查询到数据。如果 查询不到则会报异常。
+
+session和sessionFactory
+sessionFactory针对数据库，每个应用只创建一个，是线程安全的，提示session的工厂类，
+seeeion针对一次数据库方法，他不是线程安全的
+
+Hibernate分xml配置和注解配置，注解配置需要把类引入到hibernate配置的文件，如果使用JPA可以实现0配置
+JPA是EJB3.0的规范之一，定义了对数据的持久化方案，Hibernate通过实现JPA可以不必再配置文件配列出所有的类了。
+1、基本的JPA配置，
+   创建persistence.xml放到src/META-INF目录下
+   加Entity注解 OK！
+   
+   
+注意：3.5版本之后不用在导入hibernate-annotations.jar这个包,hibernate-core已经集成了.
+
+JPA的实现
+EntityManagerFactory entityManagerFactory = Persistence
+				.createEntityManagerFactory("entityManager");
+EntityManager entityManager = entityManagerFactory
+				.createEntityManager();
+EntityManagerFactory对应sessionFactory，
+entityManager对应session
+
+从JPA到Hibernate转换
+1、从EntityManagerFactory得到SessionFactory
+HibernateEntityManagerFactory factory = (HibernateEntityManagerFactory) entityManagerFactory;
+SessionFactory sessionFactory = factory.getSessionFactory();
+从而获得session
+
+2、还可以直接获取session
+Session session = (Session) entityManager.getDelegate();
+
+
+JTA（Java Transaction API）JTA允许程序执行分布式事务
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

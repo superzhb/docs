@@ -1,0 +1,154 @@
+一、使用JNDI流程-JDBC
+1、在server.xml中增加如下代码，这样就生成了一个datasource数据连接池
+<Resource name="jdbc/mysql" auth="Container"
+              type="javax.sql.DataSource"
+              maxActive="100"
+			  maxIdle="30"
+			  maxWait="10000"
+			  username="root"
+			  password="root"
+			  driverClassName="com.mysql.jdbc.Driver"
+			  url="jdbc:mysql://127.0.0.1:33067/test?useUnicode=true&amp;characterEncoding=utf-8"/>
+			  
+2、在web.xml中增加如下代码，告诉容器有一个datasource可用
+	<resource-ref>
+		<res-ref-name>mysqlDataSource</res-ref-name>
+		<res-type>javax.sql.DataSource</res-type>
+		<res-auth>Container</res-auth>
+	</resource-ref>
+3、开始使用
+
+public static void main(String[] args) {
+		try {
+			Context context = new InitialContext();
+			DataSource dataSource = (DataSource) context
+					.lookup("java:comp/env/mysqlDataSource");
+			Connection connection = dataSource.getConnection();
+
+			PreparedStatement preparedStatement = connection
+					.prepareStatement("select * from a");
+			ResultSet resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				System.out.println(resultSet.getString(1));
+			}
+		} catch (NamingException e) {
+			e.printStackTrace();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+}
+
+二、在tomcat中绑定SessionFactory
+1、在server.xml中加入配置
+ <Context ...>
+...
+      <Resource name="jdbc/TestDB"
+				auth="Container" 
+				type="javax.sql.DataSource"
+                maxActive="100" 
+				maxIdle="30" 
+				maxWait="10000"
+                username="root" 
+				password="" 
+				driverClassName="com.mysql.jdbc.Driver"
+                url="jdbc:mysql://localhost:3306/tianyu?autoReconnect=true"/>
+...
+</Context>
+
+2、在web.xml中配置resource-ref
+<web-app ...>
+...
+   <resource-ref>
+		 <description>DB Connection</description>
+		 <res-ref-name>jdbc/TestDB</res-ref-name>
+		 <res-type>javax.sql.DataSource</res-type>
+		 <res-auth>Container</res-auth>
+    </resource-ref>
+...
+</web-app>
+
+3、hibernate.cfg.xml改为
+ <session-factory>
+	<property name="connection.datasource">java:comp/env/jdbc/TestDB</property>
+	<property name="show_sql">true</property>
+	<property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+	<mapping resource="com/Student.hbm.xml" />
+</session-factory>
+
+三、Tomcat6+Spring+Hibernate JNDI 数据源配置
+
+1、在server.xml中加入配置
+ <Context ...>
+...
+      <Resource name="jdbc/TestDB"
+				auth="Container" 
+				type="javax.sql.DataSource"
+                maxActive="100" 
+				maxIdle="30" 
+				maxWait="10000"
+                username="root" 
+				password="" 
+				driverClassName="com.mysql.jdbc.Driver"
+                url="jdbc:mysql://localhost:3306/tianyu?autoReconnect=true"/>
+...
+</Context>
+
+2、在web.xml中配置resource-ref
+<web-app ...>
+...
+   <resource-ref>
+		 <description>DB Connection</description>
+		 <res-ref-name>jdbc/TestDB</res-ref-name>
+		 <res-type>javax.sql.DataSource</res-type>
+		 <res-auth>Container</res-auth>
+    </resource-ref>
+...
+</web-app>
+
+3、在applicationContext.xml中加入如下代码
+<bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">  
+    <property name="jndiName">  
+        <value>java:comp/env/jdbc/TestDB</value>  
+    </property>  
+</bean>  
+
+4、最后在applicationContext.xml中加入如下代码，让Spring接管Hibernate
+< beans> 
+...
+    < bean id= "sessionFactory" class= "org.springframework.orm.hibernate3.LocalSessionFactoryBean" >  
+        < property name= "dataSource" ref= "dataSource" />  
+        < property name= "mappingResources" >  
+            < list>  
+              < value>这里是加载的HIBERNATE OR 文件 < /value>  
+            < /list>  
+        < / property>  
+        < property name= "hibernateProperties" >  
+            < props>  
+                < prop key= "hibernate.dialect" >  
+                org. hibernate. dialect. MySQLInnoDBDialect  
+              < /prop>  
+          < /props>  
+       < /property>  
+    < /bean> 
+...	
+< /beans>  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,234 @@
+﻿Struts2 In Action
+
+Struts2 中的控制器、模型、视图 分别是FilterDispatcher、Action、Result
+
+一、动作
+1.1 动作
+Action 主要作用是承载数据，传递数据，并且返回一个字符串给Result，Result决定哪一个页面被调用
+关于 struts-default 是一个默认包,定义了大量的拦截器和拦截器栈以及常用的结果类型，我们写自己的包是扩展struts-default即可。其中设置了一个默认的拦截器栈，defaultStack,有一个params
+拦截器，负责将请求参数转移到JavaBean属性。
+
+1.2 实现动作
+struts2提供了一个接口类Action这个类只有一个execute()方法和一些常量（success,error,input等等）。
+另外提供了一个类ActionSupport实现了Action类，并且具有一些校验和错误消息本地化等方法
+public class ActionSupport implements Action, Validateable, ValidationAware, TextProvider, LocaleProvider, Serializable(){}
+
+
+Validateable, ValidationAware 这两个接口和workflow相结合就实现了验证功能，过程如下：首先当发现有workflow拦截器时，就会在动作上查找validate()方法，我们通常把验证逻辑加到动作
+中，这个方法通过Validateable 接口公布出来，在这个方法里面，如果有不合法的数据，我们调用ActionSupport的addFieldError("username","username is required")创建和存储错误消息.
+validate() 方法没有返回值，动作处理完成后，就会回到workflow拦截器，如果发现有错误消息，workflow会终止工作流，返回结果类型为input返回到输入界面.
+
+Validateable, ValidationAware 这两个接口实现了消息本地化和国际化
+TextProvider提供了本地化消息文本的功能，TextProvider提供了一系列的方法从资源文件中对消息访问，Action名称LoginAction在action中使用TextProvider提供了getText() 方法从LoginAction.properties 中取得对应的消息
+LocaleProvider提供了国际化解决方案，他提供了一个getLocal()方法，从而获取对应的语言环境.
+
+1.3 向对象传递数据：公开一个复杂对象作为JavaBean或者使用ModelDriven拦截器
+使用ModelDriven方法步骤：1、Action实现ModelDriven接口 ，实现getModel()方法 返回复杂对象即可
+@Override
+	public User getModel() {
+	if(user == null){
+		user = new User();
+	}	
+	return user;
+}
+
+1.4 struts2实现上传基于fileUpload拦截器，包含在defaultStack中，是数据自动转移的特别版，他处在params拦截器之前
+创建表单，注意
+<s:form action="upload" method="post" enctype="multipart/form-data">
+		<s:file name="filename" label="文件"></s:file>
+		<s:submit value="ok"></s:submit>
+</s:form>
+
+Action中属性,注意着三个属性名称开头必须与<s:file/>标签中的name保持一致
+File filename;
+String filenameContentType;
+String filenameFileName;
+如果长传多个文件
+File[] filenames;
+String[] filenamesContentType;
+String[] filenamesFileName;
+
+二、拦截器
+2.使用拦截器增加工作流
+ActionInvocation 封装了动作、拦截器和结果之间的相互调用关系，拦截器强大之处是改变工作流，拦截可以判断动作该不该执行，从而返回一个结果字符串，终止工作流.里面封装了所有的拦截器和Action信息
+他公开了一个invoke()方法，每当调用这个方法，ActionInvocation 都会检查自身状态，调用下一个拦截器或者动作
+
+
+一个标准的拦截器
+public class TimerInterceptor extends AbstractInterceptor {
+	 protected String intercept(ActionInvocation invocation) throws Exception {
+        long startTime = System.currentTimeMillis();
+        String result = invocation.invoke();//关键
+        long executionTime = System.currentTimeMillis() - startTime;
+        return result;
+    }
+}
+
+
+关于struts2内建的拦截器介绍：
+1、工具拦截器
+	timer拦截器，只要加上就会打印执行时间
+	logger拦截器，简单的日志记录功能
+2、数据转移拦截器
+	params拦截器(defaultStack)将请求参数转移到ValueStack公开的属性上
+	static-params拦截器将xml中的参数转移到ValueStack公开的属性上static-params在params之前触发
+	autowireing拦截器 ，为spring注入管理提供了集成点
+	servlet-config拦截器，提供了将serlvet API注入到动作的方法
+	fileUpload拦截器，上传文件
+3、工作流拦截器
+	wokflow拦截器,他与动作协作，验证数据的合法性，改变工作流
+	validation拦截器，他和validateable提供的编程式验证一样都可以用来验证数据，他们都要和workflow拦截器协作，此拦截器提供了声明式验证的方法.
+	prepare拦截器，在execute()方法之前执行，如果定义了其他方法例如update() ,则拦截器会调用prepareUpdate()方法.
+	modelDriven拦截器，使用方法，实现ModelDriven接口，在getModel()方法里返回新new的对象
+4、其他拦截器
+	exeception拦截器，它应该处于所有拦截器栈的第一个,可以根据异常类型，定位到不同的页面
+		<global-results>
+			<result name="error">error.jsp</result>
+		</global-results>
+
+		<global-exception-mappings>
+			<exception-mapping result="error" exception="java.lang.Exception"></exception-mapping>
+		</global-exception-mappings>
+	token拦截器，他会返回一个invalid.token结果，可以定位到想要的页面。
+	token-session拦截器，他会阻塞请求，直到正确的页面展示出来。
+	execAndWait拦截器，当请求事件过长时，给用户一个等待页面。
+
+设置、覆盖拦截器参数
+如果一个拦截器接受参数，那么interceptor-ref是向拦截器提供参数的地方例子如下
+<interceoter-ref name="wokflow">
+	<param name="excludeParams">input,back,cancel,browse</param>
+</interceptor-ref>
+
+如果我们引用了defaultStack拦截器栈，想改变里面的参数，这会覆盖掉workflow里面的默认参数
+
+<interceoter-ref name="defaultStack">
+	<param name="workflow.excludeParams">input,back,cancel,browse</param>
+</interceptor-ref>
+	
+	
+自定义拦截器
+如果想实现类似workflow带参数的拦截器，可以继承MethodFilterInterceptor这个抽象类，如果不想可以继承AbstractInterceptor类或者实现Interceptor接口，
+Interceptor接口有3个方法，init(),destroy(),intercept()。其中业务逻辑在intercept()方法中调用，会被递归的ActionInvocation.invoke()方法调用
+	
+三、OGNL表达式与类型转换
+OGNL表达式语言是struts2标签value属性之间的片段，它只能够与struts2标签配合使用。
+
+流入数据
+当发送请求的时候，定位到相应的动作，会创建Action实例，创建属于这个Action的ValueStack，将参数转移到对应的属性上，此时属性都是默认值，当调用param拦截器的时候,会更新对应的参数的值，同时会用OGNL内置的类型转换器完成对应的类型转换，当请求结束时，ValueStack也销毁了。
+注意：如果ValueStack中有两个对象都有同一个属性，那么上面的会把下面的覆盖掉。
+	
+流出数据
+我们可以在页面中一个OGNL表达式读取ValueStack中的属性
+
+四、标签
+ActionContext和OGNL
+ActionContext包括了应用可以使用的所有数据，包括6个对象 ValueStack、parameters、request、session、application、attr 6个，ValueStack只是其中一个对象，而且是默认的对象
+使用#表示使用ActionContext上下文中的命名对象。
+
+最基础的标签<s:property value="username" />
+使用%{username} 强制吧username当做OGNL表达式来解析
+
+set标签：为一个属性设定一个别名，默认情况下这个别名会设置到ActionContext中,需要#来访问，另外可以设置scope可选值application、session、request、page或者action默认是action
+例子1如下
+	<s:set name="userm" value="user.username"/>
+	<s:property value="#userm" />
+	
+例子2如下
+	<s:set name="userm" value="user.username" scope="request"/>
+	<s:property value="#request['userm']" />
+	
+push标签：当一个对象有很多属性时，这很有用例如，user有name和pwd属性
+不用push标签
+	<s:property value="user.name"/>
+	<s:property value="user.pwd"/>
+使用push标签	
+	<s:push value="user">
+		<s:property value="name"/>
+		<s:property value="pwd"/>
+	</s:push>
+	
+
+控制标签：iterator
+<s:iteraotr value="users" status="mystatus">
+		<li> 
+			<s:property value="#mystatus.count" />
+			<s:property value="name" />
+</s:iterator>
+
+if..else标签
+<s:if test="">
+</s:if>
+<s:elseif test="">
+</s:elseif>
+<s:else>
+</s:else>
+
+include标签，包含别的页面，类似于jsp中的include
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+
+
+
+
+
