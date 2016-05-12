@@ -45,8 +45,37 @@ SessionFactory sessionFactory = factory.getSessionFactory();
 Session session = (Session) entityManager.getDelegate();
 
 
-JTA（Java Transaction API）JTA允许程序执行分布式事务
+JTA（Java Transaction API）JTA允许程序执行分布式事务，JDBC仅限于一个数据库连接，JTA针对多个数据库
 
+Hibernate抓取数据方法
+1.通过标识符id
+Session的get()和load（）方法，这两方法至少需要传递一个类模板和要查询的对象的id，因为Hibernate中区分对象时通过对象的主键（id）来区分的。他们都只能返回一个结果，不同的是，get（）方法在没有查询到数据时会返回一个NULL，而load()方法会抛出ObjectNotFoundException的异常，且load（）方法支持延迟加载。
+2.HQL和JPA QL Query接口
+Query对象的iterator()和list()方法，可以返回一个结果集。list（）方法不支持延迟加载，而iterator()方法支持延迟加载，即先得到结果集的所有id，然后在访问对象属性的时候才会真正的去执行SQL语句根据id查询出对应的信息。
+3.Criteria 接口
+4.原生SQL
+
+抓取计划
+Hibernate默认开启延迟加载，如果想关闭的话
+1.xml中<class name="Person" lazy="false"/>
+2.注解
+fetch=FetchType.EAGER
+注意MantToOne和OneToOne这种XXToOne的关联映射，默认不开启延迟加载需要加上fetch=FetchType.LAZY
+
+抓取策略
+session.createQuery("from Message").list();
+我们知道这行代码会发送N+1条SQL语句
+Hibernate提供了一些算法，提供预抓取策略
+在class中设置batch-size="10" 
+<class name="Person" batch-size="10" >
+	<proerty calss="Goods">
+...
+</class>	
+代码会这样执行
+selecte ids from XXX;
+select * from goods where id in();一次查询10条，直到查询完所有的数据
+
+注解中，只能作为扩展@BatchSize(size = 10)
 
 
 
