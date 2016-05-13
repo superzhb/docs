@@ -1,0 +1,42 @@
+1.java集合框架
+Collection和Map
+Collection包括List和Set
+Map包括HashMap和HashTable
+
+List:
+1)ArrayList 底层实现是可以扩容的数组，特点查找快，插入、删除慢
+2)LinkedList 底层采用双向链表的结构，特点查找慢，插入、删除快
+
+set
+1)hashSet 底层采用HashMap实现，实际是存储了HashMap的key
+
+map
+1)HashMap 底层采用数组和链表，key是一个数组，每一个value是一个链表
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
