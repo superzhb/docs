@@ -1,0 +1,29 @@
+JVM
+1.堆和栈
+堆 ：跟随JVM，存储new创建的对象（包括对象的方法和变量）和数组
+栈：创建Thread就会创建一个跟随他的栈，存储基本数据类型的变量和堆堆对象的引用
+2.JVM的参数配置
+-server	//服务器模式
+-Xmx2g //JVM最大允许分配的堆内存，按需分配
+-Xms2g //JVM初始分配的堆内存，一般和Xmx配置成一样以避免每次gc后JVM重新分配内存。
+-Xmn256m //年轻代内存大小，整个JVM内存=年轻代 + 年老代 + 持久代
+-XX:PermSize=128m //持久代内存大小
+-Xss256k //设置每个线程的堆栈大小
+-XX:+DisableExplicitGC //忽略手动调用GC, System.gc()的调用就会变成一个空调用，完全不触发GC
+-XX:+UseConcMarkSweepGC //并发标记清除（CMS）收集器
+-XX:+CMSParallelRemarkEnabled //降低标记停顿
+-XX:+UseCMSCompactAtFullCollection //在FULL GC的时候对年老代的压缩
+-XX:LargePageSizeInBytes=128m //内存页的大小
+-XX:+UseFastAccessorMethods //原始类型的快速优化
+-XX:+UseCMSInitiatingOccupancyOnly //使用手动定义初始化定义开始CMS收集
+-XX:CMSInitiatingOccupancyFraction=70 //使用cms作为垃圾回收使用70％后开始CMS收集
+3.JVM回收
+根据对象的存活时间，分为年轻代和年老代、持久代。
+年轻代又分为3个区域：Eden（伊甸园表示首次分配内存的区域），和两个存活区。
+回收过程：
+1）当对象刚被创建的时候放到Eden区，当Eden区满的时候，触发YoungGC,清除不需要的对象，将剩下的对象放到一个存活区S0（注意两个存活区总有一个是空的，此时S1空）
+2）以后每次Eden区满的时候都会触发Young GC，将清理剩下的对象放到S0区，当S0快满的时候，触发Young GC的时候，会把仍然存活的对象放到S1
+3）以后每次触发Young GC都把对象放到S1（Eden：S0：S1=8:1:1）
+4）如此重复切换几次后（HotSpot虚拟机默认15次，用-XX:MaxTenuringThreshold控制，大于该值进入老年代），仍然存活的对象被放到年老代
+5）当年老代控件不足的时候将会触发Full GC,可以配置在触发Full GC时是否触发Young GC。
+常用的收集器有CMS收集器
