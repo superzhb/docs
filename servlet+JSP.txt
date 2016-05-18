@@ -1,10 +1,12 @@
 Servlet和JSP
-1.servlet是运行在客户端的小程序，主要用来处理http请求，没一个请求都会产生一个新的线程
+1.servlet是运行在客户端的小程序，主要用来处理http请求，每一个请求都会产生一个新的线程，servlet不是线程安全的，定义成员变量改为定义局部变量，因为线程之间不共享局部变量
+
 2.servlet生命周期
 实例化 创建servlet实例
 初始化 调用init() 在tomcat容器中第一次被初始化的调用，只调用一次
 service() 在每次接收到http请求时调用
 destroy() 销毁时调用，容器关闭
+
 3.JSP九大内置对象及四个作用域
 九大内置对象
 request
@@ -21,6 +23,6 @@ pageContext
 request
 session
 application
-4.servlet不是线程安全的，定义成员变量改为定义局部变量，因为线程之间不共享局部变量
-5.4种回话跟踪技术session、cookie、隐藏域、URL重写
+
+4.四种回话跟踪技术session、cookie、隐藏域、URL重写
 如果禁用cookie，那么seiion也会无效，因为seeionid存在cookie中，服务器可以通过URL重写的方式来传递sessionID.URL重写的技术，即每次HTTP交互，URL后面都会被附加上一个诸如 sid=xxxxx 这样的参数，服务端据此来识别用户。
